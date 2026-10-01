@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Schedule Manager</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+<div class="container">
+
+    <header>
+        <h1>Student Schedule Manager</h1>
+        <p>Manage your class schedule in one place</p>
+    </header>
+
+    <!-- Student Information -->
+    <section class="student-info">
+        <h2>Student Information</h2>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Student Name</label>
+                <input type="text" id="studentName"
+                       placeholder="Enter your name">
+            </div>
+
+            <div class="form-group">
+                <label>Section</label>
+                <input type="text" id="section"
+                       placeholder="Example: BSCpE-3B">
+            </div>
+        </div>
+    </section>
+
+    <!-- Add Class -->
+    <section class="schedule-form">
+
+        <h2>Add Class Schedule</h2>
+
+        <form id="scheduleForm">
+
+            <div class="form-row">
+
+                <div class="form-group">
+                    <label>Subject Code</label>
+                    <input type="text" id="subjectCode"
+                           placeholder="Example: CPE 402"
+                           required>
+                </div>
+
+                <div class="form-group">
+                    <label>Subject Name</label>
+                    <input type="text" id="subjectName"
+                           placeholder="Example: Computer Architecture"
+                           required>
+                </div>
+
+            </div>
+
+            <div class="form-row">
+
+                <div class="form-group">
+                    <label>Instructor</label>
+                    <input type="text" id="instructor"
+                           placeholder="Enter instructor name"
+                           required>
+                </div>
+
+                <div class="form-group">
+                    <label>Room</label>
+                    <input type="text" id="room"
+                           placeholder="Example: Room 204"
+                           required>
+                </div>
+
+            </div>
+
+            <div class="form-row">
+
+                <div class="form-group">
+                    <label>Day</label>
+
+                    <select id="day" required>
+                        <option value="">Select Day</option>
+                        <option value="Monday">Monday</option>
+                        <option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option>
+                        <option value="Friday">Friday</option>
+                        <option value="Saturday">Saturday</option>
+                    </select>
+
+                </div>
+
+                <div class="form-group">
+                    <label>Class Type</label>
+
+                    <select id="classType">
+                        <option value="Lecture">Lecture</option>
+                        <option value="Laboratory">Laboratory</option>
+                    </select>
+
+                </div>
+
+            </div>
+
+            <div class="form-row">
+
+                <div class="form-group">
+                    <label>Start Time</label>
+                    <input type="time" id="startTime" required>
+                </div>
+
+                <div class="form-group">
+                    <label>End Time</label>
+                    <input type="time" id="endTime" required>
+                </div>
+
+            </div>
+
+            <button type="submit" id="submitBtn">
+                Add Class
+            </button>
+
+            <button type="button"
+                    id="cancelBtn"
+                    class="cancel-btn"
+                    onclick="cancelEdit()">
+                Cancel
+            </button>
+
+        </form>
+
+    </section>
+
+    <!-- Search -->
+    <section class="controls">
+
+        <div class="search-box">
+            <label>Search Subject</label>
+
+            <input type="text"
+                   id="search"
+                   placeholder="Search subject or code...">
+        </div>
+
+        <div>
+            <label>Filter Day</label>
+
+            <select id="filterDay">
+
+                <option value="All">All Days</option>
+                <option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option>
+                <option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option>
+                <option value="Friday">Friday</option>
+                <option value="Saturday">Saturday</option>
+
+            </select>
+        </div>
+
+    </section>
+
+    <!-- Schedule -->
+    <section class="schedule-list">
+
+        <div class="section-title">
+
+            <div>
+                <h2>My Class Schedule</h2>
+                <p id="studentDisplay"></p>
+            </div>
+
+            <span id="scheduleCount">
+                0 classes
+            </span>
+
+        </div>
+
+        <div id="scheduleContainer"></div>
+
+    </section>
+
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
