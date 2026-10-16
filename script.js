@@ -1,646 +1,655 @@
-let schedules =
-    JSON.parse(localStorage.getItem("studentSchedules")) || [];
+const USERS_KEY = "ssmUsers";
+const SESSION_KEY = "ssmSession";
+const byId = id => document.getElementById(id);
 
-let editId = null;
+function readStore(key, fallback) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || "null");
+    return value === null ? fallback : value;
+  } catch {
+    return fallback;
+  }
+}
 
-const scheduleForm =
-    document.getElementById("scheduleForm");
+let users = readStore(USERS_KEY, []);
+if (!Array.isArray(users)) users = [];
 
-const studentName =
-    document.getElementById("studentName");
+let sessionId = null;
+try { sessionId = localStorage.getItem(SESSION_KEY); } catch {}
 
-const section =
-    document.getElementById("section");
+const currentUser = users.find(u => u.id === sessionId) || null;
+const USER_ID = currentUser ? currentUser.id : "guest";
 
-const subjectCode =
-    document.getElementById("subjectCode");
+byId("authScreen").hidden = !!currentUser;
+document.querySelector(".app").hidden = !currentUser;
 
-const subjectName =
-    document.getElementById("subjectName");
+if (currentUser) {
+  byId("userName").textContent = currentUser.name;
+  byId("profileInitial").textContent = currentUser.name.charAt(0).toUpperCase();
+}
 
-const instructor =
-    document.getElementById("instructor");
+async function hashPassword(password, salt) {
+  const text = salt + password;
+  if (window.crypto && crypto.subtle) {
+    const buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+    return [...new Uint8Array(buffer)].map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) hash = (Math.imul(31, hash) + text.charCodeAt(i)) | 0;
+  return "x" + hash;
+}
 
-const room =
-    document.getElementById("room");
+const newSalt = () =>
+  Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
 
-const day =
-    document.getElementById("day");
+function authError(message) {
+  byId("authError").textContent = message;
+  byId("authError").hidden = !message;
+}
 
-const classType =
-    document.getElementById("classType");
+function startSession(id) {
+  try {
+    localStorage.setItem(SESSION_KEY, id);
+  } catch {
+    authError("Unable to save your login. Please check your browser storage.");
+    return;
+  }
+  location.reload();
+}
 
-const startTime =
-    document.getElementById("startTime");
+document.querySelectorAll("[data-auth-tab]").forEach(tab => {
+  tab.addEventListener("click", () => {
+    const signup = tab.dataset.authTab === "signup";
+    document.querySelectorAll("[data-auth-tab]").forEach(t =>
+      t.classList.toggle("active", t === tab));
+    byId("loginForm").hidden = signup;
+    byId("signupForm").hidden = !signup;
+    byId("authSub").textContent = signup
+      ? "Create your own student profile."
+      : "Log in to see your own schedule.";
+    authError("");
+  });
+});
 
-const endTime =
-    document.getElementById("endTime");
+byId("loginForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const email = byId("loginEmail").value.trim().toLowerCase();
+  const user = users.find(u => u.email === email);
+  const hash = user ? await hashPassword(byId("loginPassword").value, user.salt) : null;
 
-const search =
-    document.getElementById("search");
+  if (!user || hash !== user.hash) {
+    authError("Incorrect email or password.");
+    return;
+  }
+  startSession(user.id);
+});
 
-const filterDay =
-    document.getElementById("filterDay");
+byId("signupForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const name = byId("signupName").value.trim();
+  const email = byId("signupEmail").value.trim().toLowerCase();
+  const password = byId("signupPassword").value;
 
-const scheduleContainer =
-    document.getElementById("scheduleContainer");
+  if (!name) return authError("Please enter your name.");
+  if (password.length < 6) return authError("Password must be at least 6 characters.");
+  if (password !== byId("signupConfirm").value) return authError("Passwords don't match.");
+  if (users.some(u => u.email === email)) return authError("An account with that email already exists.");
 
-const scheduleCount =
-    document.getElementById("scheduleCount");
+  const salt = newSalt();
+  const user = {
+    id: Date.now().toString(),
+    name,
+    email,
+    salt,
+    hash: await hashPassword(password, salt)
+  };
 
-const studentDisplay =
-    document.getElementById("studentDisplay");
-
-const submitBtn =
-    document.getElementById("submitBtn");
-
-const cancelBtn =
-    document.getElementById("cancelBtn");
-
-
-/* Add or Update Class */
-
-scheduleForm.addEventListener("submit", function(event) {
-
-    event.preventDefault();
-
-    if (
-        !subjectCode.value.trim() ||
-        !subjectName.value.trim() ||
-        !instructor.value.trim() ||
-        !room.value.trim() ||
-        !day.value ||
-        !startTime.value ||
-        !endTime.value
-    ) {
-
-        alert("Please complete all required fields.");
-
-        return;
+  try {
+    if (users.length === 0) {
+      ["studentScheduleManager", "ssmTeachers", "ssmTasks", "ssmReadNotifs"].forEach(key => {
+        const old = localStorage.getItem(key);
+        if (old !== null) localStorage.setItem(key + ":" + user.id, old);
+      });
     }
+    localStorage.setItem(USERS_KEY, JSON.stringify([...users, user]));
+  } catch {
+    return authError("Unable to save your account. Please check your browser storage.");
+  }
+  startSession(user.id);
+});
 
-    if (startTime.value >= endTime.value) {
+byId("logoutBtn").addEventListener("click", () => {
+  try { localStorage.removeItem(SESSION_KEY); } catch {}
+  location.reload();
+});
 
-        alert("End time must be later than start time.");
+const STORAGE_KEY = "studentScheduleManager:" + USER_ID;
 
+let schedules = [];
+
+try {
+  schedules = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  if (!Array.isArray(schedules)) schedules = [];
+} catch {
+  schedules = [];
+}
+
+const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+const colors = ["blue", "lavender", "pink", "purple"];
+
+const $ = id => document.getElementById(id);
+
+const dialog = $("scheduleDialog");
+const form = $("scheduleForm");
+
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
+function saveSchedules() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(schedules));
+    return true;
+  } catch (error) {
+    alert("Unable to save. Please check your browser storage.");
+    return false;
+  }
+}
+
+function formatTime(hour) {
+  const h = Number(hour);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const displayHour = h % 12 || 12;
+  return `${displayHour}:00 ${suffix}`;
+}
+
+function renderSchedules() {
+  days.forEach(day => {
+    $(day).innerHTML = "";
+  });
+
+  schedules.forEach(schedule => {
+    const column = $(schedule.day);
+    if (!column) return;
+
+    const card = document.createElement("article");
+    const color = colors[
+      Math.abs(schedule.subject.length) % colors.length
+    ];
+
+    card.className = `class-card ${color}`;
+
+    card.innerHTML = `
+      <h5>${escapeHTML(schedule.subject)}</h5>
+      <p>${escapeHTML(schedule.type)}</p>
+      <p class="class-time">
+        ${formatTime(schedule.start)}
+        - ${formatTime(Number(schedule.start) + Number(schedule.duration))}
+      </p>
+      <button type="button" aria-label="Delete schedule">×</button>
+    `;
+
+    card.querySelector("button").style.cssText =
+      "float:right;border:0;background:transparent;color:inherit;cursor:pointer";
+
+    card.querySelector("button").addEventListener("click", () => {
+      if (!confirm(`Delete ${schedule.subject}?`)) return;
+
+      const oldSchedules = schedules;
+      schedules = schedules.filter(item => item.id !== schedule.id);
+
+      if (!saveSchedules()) {
+        schedules = oldSchedules;
         return;
-    }
+      }
 
-
-    /* Check Schedule Conflict */
-
-    const conflict = schedules.some(schedule => {
-
-        if (schedule.id === editId) {
-            return false;
-        }
-
-        if (schedule.day !== day.value) {
-            return false;
-        }
-
-        return (
-            startTime.value < schedule.endTime &&
-            endTime.value > schedule.startTime
-        );
-
+      renderAll();
     });
 
+    column.appendChild(card);
+  });
 
-    if (conflict) {
+  renderUpcoming();
+}
 
-        const proceed = confirm(
-            "There is already a class scheduled during this time. Do you want to continue?"
-        );
+function renderUpcoming() {
+  const container = $("upcomingEvents");
 
-        if (!proceed) {
-            return;
-        }
-    }
+  if (schedules.length === 0) {
+    container.innerHTML =
+      '<p class="empty">No schedules added yet.</p>';
+    return;
+  }
 
+  container.innerHTML = schedules.slice(0, 6).map(schedule => `
+    <article class="event-item">
+      <div class="event-date">
+        ${escapeHTML(schedule.day.slice(0, 3))}
+      </div>
+      <div class="event-info">
+        <h4>${escapeHTML(schedule.subject)}</h4>
+        <p>${formatTime(schedule.start)} · ${escapeHTML(schedule.type)}</p>
+      </div>
+    </article>
+  `).join("");
+}
 
-    /* Update */
+function renderCalendar() {
+  const calendar = $("calendar");
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
 
-    if (editId !== null) {
+  $("monthTitle").textContent = now.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric"
+  });
 
-        const index =
-            schedules.findIndex(
-                schedule => schedule.id === editId
-            );
+  const weekdays = ["S", "M", "T", "W", "T", "F", "S"];
+  const firstDay = new Date(year, month, 1).getDay();
+  const totalDays = new Date(year, month + 1, 0).getDate();
 
-        schedules[index] = {
+  let html = weekdays.map(day =>
+    `<span>${day}</span>`
+  ).join("");
 
-            ...schedules[index],
+  for (let i = 0; i < firstDay; i++) {
+    html += "<span></span>";
+  }
 
-            subjectCode:
-                subjectCode.value.trim(),
+  for (let day = 1; day <= totalDays; day++) {
+    const today = day === now.getDate() ? "today" : "";
+    html += `<button type="button" class="${today}">${day}</button>`;
+  }
 
-            subjectName:
-                subjectName.value.trim(),
+  calendar.innerHTML = html;
+}
 
-            instructor:
-                instructor.value.trim(),
+function renderAll() {
+  renderSchedules();
+  renderCalendar();
+  renderOthers();
+}
 
-            room:
-                room.value.trim(),
+$("openForm").addEventListener("click", () => {
+  form.reset();
+  dialog.showModal();
+});
 
-            day:
-                day.value,
+$("cancelForm").addEventListener("click", () => {
+  dialog.close();
+});
 
-            classType:
-                classType.value,
+form.addEventListener("submit", event => {
+  event.preventDefault();
 
-            startTime:
-                startTime.value,
+  const subject = $("subject").value.trim();
+  const day = $("day").value;
+  const start = Number($("startTime").value);
+  const duration = Number($("duration").value);
+  const type = $("type").value;
 
-            endTime:
-                endTime.value
+  if (!subject) {
+    alert("Please enter a subject or activity name.");
+    return;
+  }
 
-        };
+  if (start + duration > 18) {
+    alert("Please choose a duration that ends by 6 PM.");
+    return;
+  }
 
-        alert("Class schedule updated successfully.");
+  const newSchedule = {
+    id: Date.now().toString(),
+    subject,
+    day,
+    start,
+    duration,
+    type
+  };
 
-        editId = null;
+  const oldSchedules = schedules;
+  schedules = [...schedules, newSchedule];
 
-        submitBtn.textContent = "Add Class";
+  if (!saveSchedules()) {
+    schedules = oldSchedules;
+    return;
+  }
 
-        cancelBtn.style.display = "none";
+  renderAll();
+  dialog.close();
+  form.reset();
+});
 
-    }
-
-    /* Add */
-
-    else {
-
-        const newSchedule = {
-
-            id: Date.now(),
-
-            subjectCode:
-                subjectCode.value.trim(),
-
-            subjectName:
-                subjectName.value.trim(),
-
-            instructor:
-                instructor.value.trim(),
-
-            room:
-                room.value.trim(),
-
-            day:
-                day.value,
-
-            classType:
-                classType.value,
-
-            startTime:
-                startTime.value,
-
-            endTime:
-                endTime.value
-
-        };
-
-        schedules.push(newSchedule);
-
-        alert("Class schedule added successfully.");
-
-    }
-
-
-    saveSchedules();
-
-    scheduleForm.reset();
-
-    displaySchedules();
-
+$("todayBtn").addEventListener("click", () => {
+  renderAll();
 });
 
 
-/* Display */
+const KEY_TEACHERS = "ssmTeachers:" + USER_ID;
+const KEY_TASKS = "ssmTasks:" + USER_ID;
 
-function displaySchedules() {
+function loadList(key) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
 
-    const searchText =
-        search.value.toLowerCase();
+function storeList(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch {
+    alert("Unable to save. Please check your browser storage.");
+    return false;
+  }
+}
 
-    const selectedDay =
-        filterDay.value;
+let teachers = loadList(KEY_TEACHERS);
+let tasks = loadList(KEY_TASKS);
+let taskKind = "homework";
 
+const titles = {
+  dashboard: ["Dashboard", "Your week at a glance"],
+  schedule: ["Schedule", "Manage your classes and activities"],
+  teachers: ["Teachers", "Link a teacher to each of your subjects"],
+  homework: ["Homework", "Remind yourself what's due"],
+  tests: ["Tests", "Keep track of upcoming tests"],
+  notifications: ["Notifications", "Reminders for what's due soon"],
+  courses: ["My Courses", "Every subject on your schedule"]
+};
 
-    let filteredSchedules =
-        schedules.filter(schedule => {
+function showView(name) {
+  if (!titles[name]) name = "dashboard";
+  document.querySelectorAll(".view").forEach(v => {
+    v.hidden = v.id !== "view-" + name;
+  });
+  document.querySelectorAll(".nav-link").forEach(link => {
+    link.classList.toggle("active", link.dataset.view === name);
+  });
+  $("pageTitle").textContent = titles[name][0];
+  $("pageSub").textContent = titles[name][1];
+}
 
-            const matchesSearch =
+document.querySelectorAll("[data-view]").forEach(el => {
+  el.addEventListener("click", event => {
+    event.preventDefault();
+    showView(el.dataset.view);
+  });
+});
 
-                schedule.subjectName
-                    .toLowerCase()
-                    .includes(searchText)
+const subjects = () => [...new Set(schedules.map(s => s.subject))];
+const dateStr = d =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const daysUntil = str =>
+  Math.round((new Date(str + "T00:00") - new Date(dateStr(new Date()) + "T00:00")) / 864e5);
+const dueLabel = n =>
+  n < 0 ? `Overdue by ${-n} day${n === -1 ? "" : "s"}`
+  : n === 0 ? "Due today"
+  : n === 1 ? "Due tomorrow"
+  : `Due in ${n} days`;
+const todayName = () => ["Sunday", ...days, "Saturday"][new Date().getDay()];
+const subjectOptions = extra =>
+  (extra || "") + subjects().map(s =>
+    `<option value="${escapeHTML(s)}">${escapeHTML(s)}</option>`).join("");
 
-                ||
+const row = (badge, title, sub, right = "") => `
+  <div class="row">
+    <div class="badge">${badge}</div>
+    <div class="grow"><h4>${title}</h4><p>${sub}</p></div>
+    ${right}
+  </div>`;
 
-                schedule.subjectCode
-                    .toLowerCase()
-                    .includes(searchText);
+function taskRow(task) {
+  const n = daysUntil(task.due);
+  const soon = !task.done && n <= 1 ? "soon" : "";
+  return `
+    <div class="row${task.done ? " done" : ""}">
+      <input type="checkbox" data-act="toggle" data-id="${task.id}"
+        ${task.done ? "checked" : ""} aria-label="Mark as done">
+      <div class="grow">
+        <h4>${escapeHTML(task.title)}</h4>
+        <p>${escapeHTML(task.subject)} · <span class="${soon}">${dueLabel(n)}</span> (${escapeHTML(task.due)})</p>
+      </div>
+      <button type="button" class="x-btn" data-act="delTask" data-id="${task.id}"
+        aria-label="Delete">×</button>
+    </div>`;
+}
 
+function renderDashboard() {
+  const pending = tasks.filter(t => !t.done)
+    .sort((a, b) => a.due.localeCompare(b.due));
+  const today = schedules.filter(s => s.day === todayName())
+    .sort((a, b) => a.start - b.start);
+  const stat = (n, label) =>
+    `<div class="stat"><b>${n}</b><span>${label}</span></div>`;
 
-            const matchesDay =
+  $("dashboardContent").innerHTML = `
+    <div class="stats">
+      ${stat(schedules.length, "Classes per week")}
+      ${stat(subjects().length, "Courses")}
+      ${stat(pending.filter(t => t.kind === "homework").length, "Homework pending")}
+      ${stat(pending.filter(t => t.kind === "test").length, "Tests coming up")}
+    </div>
+    <div class="two-col">
+      <div class="card-box">
+        <h3>Today's Classes</h3>
+        ${today.length ? today.map(s => row(
+          formatTime(s.start), escapeHTML(s.subject), escapeHTML(s.type))).join("")
+          : '<p class="empty">No classes today.</p>'}
+      </div>
+      <div class="card-box">
+        <h3>Next Due</h3>
+        ${pending.length ? pending.slice(0, 5).map(t => row(
+          t.kind === "test" ? "Test" : "HW", escapeHTML(t.title),
+          `${escapeHTML(t.subject)} · ${dueLabel(daysUntil(t.due))}`)).join("")
+          : '<p class="empty">Nothing due. Nice!</p>'}
+      </div>
+    </div>`;
+}
 
-                selectedDay === "All" ||
+function renderTeachers() {
+  const list = teachers.filter(t => subjects().includes(t.subject));
+  const missing = subjects().filter(s => !teachers.some(t => t.subject === s));
+  let html = list.map(t => row(
+    escapeHTML(t.name.charAt(0).toUpperCase()),
+    escapeHTML(t.name),
+    `${escapeHTML(t.subject)}${t.email ? " · " + escapeHTML(t.email) : ""}`,
+    `<button type="button" class="x-btn" data-act="delTeacher" data-id="${t.id}"
+      aria-label="Remove teacher">×</button>`)).join("");
 
-                schedule.day === selectedDay;
+  if (!subjects().length) {
+    html = '<p class="empty">Add a subject in your Schedule first, then link a teacher to it here.</p>';
+  } else if (!list.length) {
+    html = '<p class="empty">No teachers added yet.</p>';
+  }
+  if (missing.length && subjects().length) {
+    html += `<p class="hint">No teacher yet for: ${missing.map(escapeHTML).join(", ")}</p>`;
+  }
+  $("teacherList").innerHTML = html;
+}
 
+function renderTasks() {
+  [["homework", "homeworkList", "No homework reminders yet."],
+   ["test", "testList", "No tests added yet."]].forEach(([kind, id, empty]) => {
+    const items = tasks.filter(t => t.kind === kind)
+      .sort((a, b) => Number(a.done) - Number(b.done) || a.due.localeCompare(b.due));
+    $(id).innerHTML = items.length
+      ? items.map(taskRow).join("")
+      : `<p class="empty">${empty}</p>`;
+  });
+}
 
-            return matchesSearch && matchesDay;
+const KEY_READ = "ssmReadNotifs:" + USER_ID;
+let readIds = loadList(KEY_READ);
 
-        });
+function renderNotifications() {
+  const items = tasks.filter(t => !t.done && daysUntil(t.due) <= 1)
+    .sort((a, b) => a.due.localeCompare(b.due));
+  const unread = items.filter(t => !readIds.includes(t.id)).length;
 
+  $("notifBadge").textContent = unread;
+  $("notifBadge").hidden = unread === 0;
+  $("readAllBtn").disabled = unread === 0;
 
-    /* Sort by Day and Time */
-
-    const dayOrder = {
-
-        Monday: 1,
-        Tuesday: 2,
-        Wednesday: 3,
-        Thursday: 4,
-        Friday: 5,
-        Saturday: 6
-
-    };
-
-
-    filteredSchedules.sort((a, b) => {
-
-        if (dayOrder[a.day] !== dayOrder[b.day]) {
-
-            return dayOrder[a.day] -
-                   dayOrder[b.day];
-
-        }
-
-        return a.startTime.localeCompare(
-            b.startTime
-        );
-
-    });
-
-
-    scheduleContainer.innerHTML = "";
-
-
-    scheduleCount.textContent =
-
-        `${filteredSchedules.length} ${
-            filteredSchedules.length === 1
-                ? "class"
-                : "classes"
-        }`;
-
-
-    if (filteredSchedules.length === 0) {
-
-        scheduleContainer.innerHTML = `
-
-            <div class="empty">
-
-                No class schedules found.
-
+  $("notifList").innerHTML = items.length
+    ? items.map(t => {
+        const isRead = readIds.includes(t.id);
+        const kind = t.kind === "test" ? "Test" : "Homework";
+        return `
+          <div class="row notif ${isRead ? "read" : "unread"}" role="button" tabindex="0"
+            data-act="readNotif" data-id="${t.id}"
+            aria-label="${isRead ? "Read" : "Unread"} reminder: ${escapeHTML(t.title)}">
+            <div class="badge">${t.kind === "test" ? "Test" : "HW"}</div>
+            <div class="grow">
+              <h4>${kind}: ${escapeHTML(t.title)}</h4>
+              <p>${escapeHTML(t.subject)} · <span class="soon">${dueLabel(daysUntil(t.due))}</span></p>
             </div>
-
-        `;
-
-        return;
-    }
-
-
-    filteredSchedules.forEach(schedule => {
-
-        const card =
-            document.createElement("div");
-
-        card.className =
-            "schedule-card";
-
-
-        card.innerHTML = `
-
-            <h3>
-                ${escapeHTML(schedule.subjectName)}
-            </h3>
-
-            <div class="subject-code">
-
-                ${escapeHTML(schedule.subjectCode)}
-
-            </div>
-
-            <div class="schedule-info">
-
-                <strong>Day:</strong>
-                ${schedule.day}
-
-                <br>
-
-                <strong>Time:</strong>
-                ${formatTime(schedule.startTime)}
-                -
-                ${formatTime(schedule.endTime)}
-
-                <br>
-
-                <strong>Instructor:</strong>
-                ${escapeHTML(schedule.instructor)}
-
-                <br>
-
-                <strong>Room:</strong>
-                ${escapeHTML(schedule.room)}
-
-            </div>
-
-            <span class="class-type">
-
-                ${schedule.classType}
-
-            </span>
-
-            <div class="actions">
-
-                <button
-                    class="edit-btn"
-                    onclick="editSchedule(${schedule.id})">
-
-                    Edit
-
-                </button>
-
-                <button
-                    class="delete-btn"
-                    onclick="deleteSchedule(${schedule.id})">
-
-                    Delete
-
-                </button>
-
-            </div>
-
-        `;
-
-        scheduleContainer.appendChild(card);
-
-    });
-
+            <span class="dot" title="Unread"></span>
+          </div>`;
+      }).join("")
+    : '<p class="empty">You\'re all caught up. Nothing is due today or tomorrow.</p>';
 }
 
-
-/* Edit */
-
-function editSchedule(id) {
-
-    const schedule =
-        schedules.find(
-            schedule => schedule.id === id
-        );
-
-
-    if (!schedule) {
-        return;
-    }
-
-
-    subjectCode.value =
-        schedule.subjectCode;
-
-    subjectName.value =
-        schedule.subjectName;
-
-    instructor.value =
-        schedule.instructor;
-
-    room.value =
-        schedule.room;
-
-    day.value =
-        schedule.day;
-
-    classType.value =
-        schedule.classType;
-
-    startTime.value =
-        schedule.startTime;
-
-    endTime.value =
-        schedule.endTime;
-
-
-    editId = id;
-
-    submitBtn.textContent =
-        "Update Class";
-
-    cancelBtn.style.display =
-        "inline-block";
-
-
-    window.scrollTo({
-
-        top: 0,
-
-        behavior: "smooth"
-
-    });
-
+function renderCourses() {
+  const subs = subjects();
+  $("courseList").innerHTML = subs.length ? subs.map(name => {
+    const items = schedules.filter(s => s.subject === name);
+    const hours = items.reduce((sum, s) => sum + Number(s.duration), 0);
+    const who = teachers.filter(t => t.subject === name)
+      .map(t => escapeHTML(t.name)).join(", ") || "No teacher yet";
+    const due = tasks.filter(t => !t.done && t.subject === name).length;
+    const when = items.map(s =>
+      `${escapeHTML(s.day.slice(0, 3))} ${formatTime(s.start)}`).join(" · ");
+    return `
+      <article class="class-card course ${colors[name.length % colors.length]}">
+        <h5>${escapeHTML(name)}</h5>
+        <p>Teacher: ${who}</p>
+        <p>${items.length} class${items.length === 1 ? "" : "es"} · ${hours} hr/week</p>
+        <p>${when}</p>
+        <p>${due} pending reminder${due === 1 ? "" : "s"}</p>
+      </article>`;
+  }).join("") : '<p class="empty">No courses yet. Add a class to your Schedule and it will appear here.</p>';
 }
 
-
-/* Cancel Edit */
-
-function cancelEdit() {
-
-    editId = null;
-
-    scheduleForm.reset();
-
-    submitBtn.textContent =
-        "Add Class";
-
-    cancelBtn.style.display =
-        "none";
+function renderOthers() {
+  renderDashboard();
+  renderTeachers();
+  renderTasks();
+  renderNotifications();
+  renderCourses();
 }
 
+document.addEventListener("keydown", event => {
+  if ((event.key === "Enter" || event.key === " ") && event.target.matches(".notif")) {
+    event.preventDefault();
+    event.target.click();
+  }
+});
 
-/* Delete */
+document.addEventListener("click", event => {
+  const btn = event.target.closest("[data-act]");
+  if (!btn) return;
+  const id = btn.dataset.id;
 
-function deleteSchedule(id) {
-
-    const schedule =
-        schedules.find(
-            schedule => schedule.id === id
-        );
-
-
-    if (!schedule) {
-        return;
+  if (btn.dataset.act === "delTeacher") {
+    if (!confirm("Remove this teacher?")) return;
+    const next = teachers.filter(t => t.id !== id);
+    if (!storeList(KEY_TEACHERS, next)) return;
+    teachers = next;
+  } else if (btn.dataset.act === "delTask") {
+    if (!confirm("Delete this reminder?")) return;
+    const next = tasks.filter(t => t.id !== id);
+    if (!storeList(KEY_TASKS, next)) return;
+    tasks = next;
+  } else if (btn.dataset.act === "readNotif" || btn.dataset.act === "readAll") {
+    const ids = btn.dataset.act === "readAll"
+      ? tasks.filter(t => !t.done && daysUntil(t.due) <= 1).map(t => t.id)
+      : [id];
+    const next = [...new Set([...readIds, ...ids])];
+    if (!storeList(KEY_READ, next)) return;
+    readIds = next;
+  } else if (btn.dataset.act === "toggle") {
+    const next = tasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
+    if (!storeList(KEY_TASKS, next)) {
+      renderOthers();
+      return;
     }
+    tasks = next;
+  }
+  renderOthers();
+});
 
+document.querySelectorAll("[data-close]").forEach(btn => {
+  btn.addEventListener("click", () => $(btn.dataset.close).close());
+});
 
-    const confirmed = confirm(
+$("addTeacher").addEventListener("click", () => {
+  if (!subjects().length) {
+    alert("Add a subject to your Schedule first, then you can link a teacher to it.");
+    return;
+  }
+  $("teacherForm").reset();
+  $("teacherSubject").innerHTML = subjectOptions();
+  $("teacherDialog").showModal();
+});
 
-        `Delete ${schedule.subjectCode} - ${schedule.subjectName}?`
+$("teacherForm").addEventListener("submit", event => {
+  event.preventDefault();
+  const name = $("teacherName").value.trim();
+  if (!name) return;
+  const next = [...teachers, {
+    id: Date.now().toString(),
+    subject: $("teacherSubject").value,
+    name,
+    email: $("teacherEmail").value.trim()
+  }];
+  if (!storeList(KEY_TEACHERS, next)) return;
+  teachers = next;
+  renderOthers();
+  $("teacherDialog").close();
+});
 
-    );
-
-
-    if (!confirmed) {
-        return;
-    }
-
-
-    schedules =
-        schedules.filter(
-            schedule => schedule.id !== id
-        );
-
-
-    saveSchedules();
-
-    displaySchedules();
-
+function openTaskDialog(kind) {
+  taskKind = kind;
+  $("taskForm").reset();
+  $("taskHeading").textContent = kind === "test" ? "Add Test" : "Add Homework";
+  $("taskSubject").innerHTML = subjectOptions('<option value="General">General</option>');
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  $("taskDue").value = dateStr(tomorrow);
+  $("taskDialog").showModal();
 }
 
+$("addHomework").addEventListener("click", () => openTaskDialog("homework"));
+$("addTest").addEventListener("click", () => openTaskDialog("test"));
 
-/* Save */
+$("taskForm").addEventListener("submit", event => {
+  event.preventDefault();
+  const title = $("taskTitle").value.trim();
+  if (!title) return;
+  const next = [...tasks, {
+    id: Date.now().toString(),
+    kind: taskKind,
+    title,
+    subject: $("taskSubject").value,
+    due: $("taskDue").value,
+    done: false
+  }];
+  if (!storeList(KEY_TASKS, next)) return;
+  tasks = next;
+  renderOthers();
+  $("taskDialog").close();
+});
 
-function saveSchedules() {
-
-    localStorage.setItem(
-
-        "studentSchedules",
-
-        JSON.stringify(schedules)
-
-    );
-
-}
-
-
-/* Format Time */
-
-function formatTime(time) {
-
-    const parts =
-        time.split(":");
-
-    let hours =
-        parseInt(parts[0]);
-
-    const minutes =
-        parts[1];
-
-    const ampm =
-        hours >= 12
-            ? "PM"
-            : "AM";
-
-    hours =
-        hours % 12 || 12;
-
-    return `${hours}:${minutes} ${ampm}`;
-
-}
-
-
-/* Protect Display */
-
-function escapeHTML(text) {
-
-    return text
-
-        .replace(/&/g, "&amp;")
-
-        .replace(/</g, "&lt;")
-
-        .replace(/>/g, "&gt;")
-
-        .replace(/"/g, "&quot;")
-
-        .replace(/'/g, "&#039;");
-
-}
-
-
-/* Student Information */
-
-function updateStudentDisplay() {
-
-    const name =
-        studentName.value.trim();
-
-    const studentSection =
-        section.value.trim();
-
-
-    if (name && studentSection) {
-
-        studentDisplay.textContent =
-            `${name} • ${studentSection}`;
-
-    }
-
-    else if (name) {
-
-        studentDisplay.textContent =
-            name;
-
-    }
-
-    else if (studentSection) {
-
-        studentDisplay.textContent =
-            `Section: ${studentSection}`;
-
-    }
-
-    else {
-
-        studentDisplay.textContent =
-            "";
-
-    }
-
-}
-
-
-studentName.addEventListener(
-    "input",
-    updateStudentDisplay
-);
-
-section.addEventListener(
-    "input",
-    updateStudentDisplay
-);
-
-
-/* Search */
-
-search.addEventListener(
-    "input",
-    displaySchedules
-);
-
-
-/* Filter */
-
-filterDay.addEventListener(
-    "change",
-    displaySchedules
-);
-
-
-/* Initial Display */
-
-displaySchedules();
-updateStudentDisplay();
+renderAll();
+showView("dashboard");
