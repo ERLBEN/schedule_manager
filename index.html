@@ -1,193 +1,268 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Schedule Manager</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Schedule Manager</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
+  <div class="auth" id="authScreen" hidden>
+    <h1 class="auth-title"><span>◆</span> Student Schedule Manager</h1>
+    <p class="auth-sub" id="authSub">Log in to see your own schedule.</p>
 
-<div class="container">
+    <div class="auth-tabs">
+      <button type="button" class="active" data-auth-tab="login">Log in</button>
+      <button type="button" data-auth-tab="signup">Sign up</button>
+    </div>
 
-    <header>
-        <h1>Student Schedule Manager</h1>
-        <p>Manage your class schedule in one place</p>
-    </header>
+    <p class="auth-error" id="authError" role="alert" hidden></p>
 
-    <!-- Student Information -->
-    <section class="student-info">
-        <h2>Student Information</h2>
+    <form id="loginForm">
+      <label for="loginEmail">Email</label>
+      <input id="loginEmail" type="email" required autocomplete="username" placeholder="you@school.edu">
+      <label for="loginPassword">Password</label>
+      <input id="loginPassword" type="password" required autocomplete="current-password">
+      <button type="submit" class="add-btn auth-submit">Log in</button>
+    </form>
 
-        <div class="form-row">
-            <div class="form-group">
-                <label>Student Name</label>
-                <input type="text" id="studentName"
-                       placeholder="Enter your name">
-            </div>
+    <form id="signupForm" hidden>
+      <label for="signupName">Full Name</label>
+      <input id="signupName" required autocomplete="name" placeholder="e.g. Juan Dela Cruz">
+      <label for="signupEmail">Email</label>
+      <input id="signupEmail" type="email" required autocomplete="username" placeholder="you@school.edu">
+      <label for="signupPassword">Password (6+ characters)</label>
+      <input id="signupPassword" type="password" required minlength="6" autocomplete="new-password">
+      <label for="signupConfirm">Confirm Password</label>
+      <input id="signupConfirm" type="password" required minlength="6" autocomplete="new-password">
+      <button type="submit" class="add-btn auth-submit">Create Account</button>
+    </form>
+  </div>
 
-            <div class="form-group">
-                <label>Section</label>
-                <input type="text" id="section"
-                       placeholder="Example: BSCpE-3B">
-            </div>
-        </div>
-    </section>
+  <div class="app">
+    <aside class="sidebar">
+      <h2 class="logo"><span>◆</span></h2>
 
-    <!-- Add Class -->
-    <section class="schedule-form">
+      <nav>
+        <a href="#" class="nav-link" data-view="dashboard">+ Dashboard</a>
+        <a href="#" class="nav-link" data-view="schedule">0 Schedule</a>
+        <a href="#" class="nav-link" data-view="teachers">@ Teachers</a>
+        <a href="#" class="nav-link" data-view="homework">π Homework</a>
+        <a href="#" class="nav-link" data-view="tests">? Tests</a>
+        <hr>
+        <a href="#" class="nav-link" data-view="notifications">! Notifications <span class="count" id="notifBadge" hidden>0</span></a>
+      </nav>
 
-        <h2>Add Class Schedule</h2>
+      <div class="promo">
+        <h3>Explore your<br>learning journey!</h3>
+        <div class="books"><img src="bookreading.png" alt="Student reading a book with headphones on"></div>
+        <p>Organize your classes and study time.</p>
+        <button type="button" data-view="courses">View Courses</button>
+      </div>
+    </aside>
 
-        <form id="scheduleForm">
-
-            <div class="form-row">
-
-                <div class="form-group">
-                    <label>Subject Code</label>
-                    <input type="text" id="subjectCode"
-                           placeholder="Example: CPE 402"
-                           required>
-                </div>
-
-                <div class="form-group">
-                    <label>Subject Name</label>
-                    <input type="text" id="subjectName"
-                           placeholder="Example: Computer Architecture"
-                           required>
-                </div>
-
-            </div>
-
-            <div class="form-row">
-
-                <div class="form-group">
-                    <label>Instructor</label>
-                    <input type="text" id="instructor"
-                           placeholder="Enter instructor name"
-                           required>
-                </div>
-
-                <div class="form-group">
-                    <label>Room</label>
-                    <input type="text" id="room"
-                           placeholder="Example: Room 204"
-                           required>
-                </div>
-
-            </div>
-
-            <div class="form-row">
-
-                <div class="form-group">
-                    <label>Day</label>
-
-                    <select id="day" required>
-                        <option value="">Select Day</option>
-                        <option value="Monday">Monday</option>
-                        <option value="Tuesday">Tuesday</option>
-                        <option value="Wednesday">Wednesday</option>
-                        <option value="Thursday">Thursday</option>
-                        <option value="Friday">Friday</option>
-                        <option value="Saturday">Saturday</option>
-                    </select>
-
-                </div>
-
-                <div class="form-group">
-                    <label>Class Type</label>
-
-                    <select id="classType">
-                        <option value="Lecture">Lecture</option>
-                        <option value="Laboratory">Laboratory</option>
-                    </select>
-
-                </div>
-
-            </div>
-
-            <div class="form-row">
-
-                <div class="form-group">
-                    <label>Start Time</label>
-                    <input type="time" id="startTime" required>
-                </div>
-
-                <div class="form-group">
-                    <label>End Time</label>
-                    <input type="time" id="endTime" required>
-                </div>
-
-            </div>
-
-            <button type="submit" id="submitBtn">
-                Add Class
-            </button>
-
-            <button type="button"
-                    id="cancelBtn"
-                    class="cancel-btn"
-                    onclick="cancelEdit()">
-                Cancel
-            </button>
-
-        </form>
-
-    </section>
-
-    <!-- Search -->
-    <section class="controls">
-
-        <div class="search-box">
-            <label>Search Subject</label>
-
-            <input type="text"
-                   id="search"
-                   placeholder="Search subject or code...">
-        </div>
-
+    <main class="main">
+      <header class="topbar">
         <div>
-            <label>Filter Day</label>
-
-            <select id="filterDay">
-
-                <option value="All">All Days</option>
-                <option value="Monday">Monday</option>
-                <option value="Tuesday">Tuesday</option>
-                <option value="Wednesday">Wednesday</option>
-                <option value="Thursday">Thursday</option>
-                <option value="Friday">Friday</option>
-                <option value="Saturday">Saturday</option>
-
-            </select>
+          <h1 id="pageTitle">Dashboard</h1>
+          <p id="pageSub">Manage your classes and activities</p>
         </div>
+        <div class="user-box">
+          <span id="userName"></span>
+          <div class="profile" id="profileInitial">S</div>
+          <button type="button" class="logout-btn" id="logoutBtn">Log out</button>
+        </div>
+      </header>
 
-    </section>
+      <div class="view" id="view-schedule" hidden>
+      <div class="section-title">
+        <div>
+          <h2>Weekly Schedule</h2>
+          <p>Keep track of your classes every week.</p>
+        </div>
+        <button class="add-btn" id="openForm" type="button">
+          + Add Schedule
+        </button>
+      </div>
 
-    <!-- Schedule -->
-    <section class="schedule-list">
+      <section class="content">
+        <div class="schedule-panel">
+          <div class="week-header">
+            <h3 id="weekTitle">Your Classes</h3>
+            <button id="todayBtn" type="button">Today</button>
+          </div>
 
-        <div class="section-title">
-
-            <div>
-                <h2>My Class Schedule</h2>
-                <p id="studentDisplay"></p>
+          <div class="schedule-grid">
+            <div class="day-column">
+              <h4>Time</h4>
+              <div class="time">8 AM</div>
+              <div class="time">9 AM</div>
+              <div class="time">10 AM</div>
+              <div class="time">11 AM</div>
+              <div class="time">12 PM</div>
+              <div class="time">1 PM</div>
+              <div class="time">2 PM</div>
+              <div class="time">3 PM</div>
+              <div class="time">4 PM</div>
+              <div class="time">5 PM</div>
             </div>
 
-            <span id="scheduleCount">
-                0 classes
-            </span>
-
+            <div class="day-column">
+              <h4>Mon</h4>
+              <div class="day-events" id="Monday"></div>
+            </div>
+            <div class="day-column">
+              <h4>Tue</h4>
+              <div class="day-events" id="Tuesday"></div>
+            </div>
+            <div class="day-column">
+              <h4>Wed</h4>
+              <div class="day-events" id="Wednesday"></div>
+            </div>
+            <div class="day-column">
+              <h4>Thu</h4>
+              <div class="day-events" id="Thursday"></div>
+            </div>
+            <div class="day-column">
+              <h4>Fri</h4>
+              <div class="day-events" id="Friday"></div>
+            </div>
+          </div>
         </div>
 
-        <div id="scheduleContainer"></div>
+        <aside class="right-panel">
+          <div class="calendar-panel">
+            <h3 id="monthTitle">Calendar</h3>
+            <div id="calendar" class="calendar"></div>
+          </div>
 
-    </section>
+          <div class="upcoming-panel">
+            <h3>Upcoming Events</h3>
+            <div id="upcomingEvents">
+              <p class="empty">No schedules added yet.</p>
+            </div>
+          </div>
+        </aside>
+      </section>
+      </div>
 
-</div>
+      <div class="view" id="view-dashboard" hidden><div id="dashboardContent"></div></div>
 
-<script src="script.js"></script>
+      <div class="view" id="view-teachers" hidden>
+        <div class="section-title"><div><h2>Your Teachers</h2><p>Link a teacher to any subject on your schedule.</p></div><button class="add-btn" id="addTeacher" type="button">+ Add Teacher</button></div>
+        <div class="card-box" id="teacherList"></div>
+      </div>
 
+      <div class="view" id="view-homework" hidden>
+        <div class="section-title"><div><h2>Homework</h2><p>Add homework to be reminded before it's due.</p></div><button class="add-btn" id="addHomework" type="button">+ Add Homework</button></div>
+        <div class="card-box" id="homeworkList"></div>
+      </div>
+
+      <div class="view" id="view-tests" hidden>
+        <div class="section-title"><div><h2>Tests</h2><p>Add tests so you never get caught out.</p></div><button class="add-btn" id="addTest" type="button">+ Add Test</button></div>
+        <div class="card-box" id="testList"></div>
+      </div>
+
+      <div class="view" id="view-notifications" hidden>
+        <div class="section-title"><div><h2>Reminders</h2><p>Homework and tests that are overdue, due today or due tomorrow. Click a reminder to mark it as read.</p></div><button class="add-btn" id="readAllBtn" type="button" data-act="readAll">Mark all as read</button></div>
+        <div class="card-box" id="notifList"></div>
+      </div>
+
+      <div class="view" id="view-courses" hidden>
+        <div class="section-title"><div><h2>Your Courses</h2><p>Every subject you add to your schedule shows up here.</p></div></div>
+        <div class="course-grid" id="courseList"></div>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="scheduleDialog">
+    <form id="scheduleForm">
+      <h2>Add Schedule</h2>
+
+      <label for="subject">Subject or Activity</label>
+      <input id="subject" required placeholder="e.g. Computer Architecture">
+
+      <label for="day">Day</label>
+      <select id="day" required>
+        <option value="Monday">Monday</option>
+        <option value="Tuesday">Tuesday</option>
+        <option value="Wednesday">Wednesday</option>
+        <option value="Thursday">Thursday</option>
+        <option value="Friday">Friday</option>
+      </select>
+
+      <label for="startTime">Start Time</label>
+      <select id="startTime">
+        <option value="8">8 AM</option>
+        <option value="9">9 AM</option>
+        <option value="10">10 AM</option>
+        <option value="11">11 AM</option>
+        <option value="12">12 PM</option>
+        <option value="13">1 PM</option>
+        <option value="14">2 PM</option>
+        <option value="15">3 PM</option>
+        <option value="16">4 PM</option>
+        <option value="17">5 PM</option>
+      </select>
+
+      <label for="duration">Duration</label>
+      <select id="duration">
+        <option value="1">1 hour</option>
+        <option value="2">2 hours</option>
+        <option value="3">3 hours</option>
+      </select>
+
+      <label for="type">Class Type</label>
+      <select id="type">
+        <option>Lecture</option>
+        <option>Laboratory</option>
+        <option>Workshop</option>
+        <option>Practical</option>
+        <option>Exam</option>
+        <option>Study Session</option>
+      </select>
+
+      <div class="form-buttons">
+        <button type="button" id="cancelForm" class="cancel-btn">
+          Cancel
+        </button>
+        <button type="submit" class="add-btn">Save Schedule</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="teacherDialog">
+    <form id="teacherForm">
+      <h2>Add Teacher</h2>
+      <label for="teacherSubject">Subject</label>
+      <select id="teacherSubject" required></select>
+      <label for="teacherName">Teacher Name</label>
+      <input id="teacherName" required placeholder="e.g. Mr. Santos">
+      <label for="teacherEmail">Email (optional)</label>
+      <input id="teacherEmail" type="email" placeholder="teacher@school.edu">
+      <div class="form-buttons">
+        <button type="button" class="cancel-btn" data-close="teacherDialog">Cancel</button>
+        <button type="submit" class="add-btn">Save Teacher</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="taskDialog">
+    <form id="taskForm">
+      <h2 id="taskHeading">Add Homework</h2>
+      <label for="taskTitle">Title</label>
+      <input id="taskTitle" required placeholder="e.g. Chapter 4 problems">
+      <label for="taskSubject">Subject</label>
+      <select id="taskSubject"></select>
+      <label for="taskDue">Due Date</label>
+      <input id="taskDue" type="date" required>
+      <div class="form-buttons">
+        <button type="button" class="cancel-btn" data-close="taskDialog">Cancel</button>
+        <button type="submit" class="add-btn">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="script.js"></script>
 </body>
 </html>
