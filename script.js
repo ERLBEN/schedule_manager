@@ -105,6 +105,7 @@ byId("signupForm").addEventListener("submit", async event => {
   };
 
   try {
+    // First account adopts any schedule data saved before accounts existed.
     if (users.length === 0) {
       ["studentScheduleManager", "ssmTeachers", "ssmTasks", "ssmReadNotifs"].forEach(key => {
         const old = localStorage.getItem(key);
@@ -332,6 +333,7 @@ $("todayBtn").addEventListener("click", () => {
 });
 
 
+/* ---------- Extra pages ---------- */
 const KEY_TEACHERS = "ssmTeachers:" + USER_ID;
 const KEY_TASKS = "ssmTasks:" + USER_ID;
 
@@ -433,7 +435,20 @@ function renderDashboard() {
   const stat = (n, label) =>
     `<div class="stat"><b>${n}</b><span>${label}</span></div>`;
 
+  const firstName = currentUser ? currentUser.name.split(" ")[0] : "there";
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const dateText = new Date().toLocaleDateString("en-US", {
+    weekday: "long", month: "long", day: "numeric"
+  });
+
   $("dashboardContent").innerHTML = `
+    <div class="hero">
+      <h2>${greeting}, ${escapeHTML(firstName)}! 👋</h2>
+      <p>${dateText} · ${today.length
+        ? `You have ${today.length} class${today.length === 1 ? "" : "es"} today`
+        : "No classes today, enjoy the breathing room"}</p>
+    </div>
     <div class="stats">
       ${stat(schedules.length, "Classes per week")}
       ${stat(subjects().length, "Courses")}
@@ -556,6 +571,7 @@ document.addEventListener("keydown", event => {
   }
 });
 
+/* Delete / toggle buttons */
 document.addEventListener("click", event => {
   const btn = event.target.closest("[data-act]");
   if (!btn) return;
@@ -593,6 +609,7 @@ document.querySelectorAll("[data-close]").forEach(btn => {
   btn.addEventListener("click", () => $(btn.dataset.close).close());
 });
 
+/* Teacher form */
 $("addTeacher").addEventListener("click", () => {
   if (!subjects().length) {
     alert("Add a subject to your Schedule first, then you can link a teacher to it.");
@@ -619,6 +636,7 @@ $("teacherForm").addEventListener("submit", event => {
   $("teacherDialog").close();
 });
 
+/* Homework / test form */
 function openTaskDialog(kind) {
   taskKind = kind;
   $("taskForm").reset();
