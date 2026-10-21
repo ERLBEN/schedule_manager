@@ -915,7 +915,7 @@ body::before {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: url("clocks-n-calendars.png") center / cover no-repeat;
+  background: url("scheduler.png") center / cover no-repeat;
   opacity: 0.4;
   pointer-events: none;
 }
