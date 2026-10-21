@@ -433,7 +433,6 @@ nav hr {
   padding: 10px 0;
 }
 
-/* Add schedule form */
 dialog {
   width: min(430px, calc(100% - 24px));
   margin: auto;
@@ -550,7 +549,7 @@ dialog select {
     font-size: 18px;
   }
 }
-/* Extra pages */
+
 [hidden] {
   display: none !important;
 }
@@ -592,7 +591,6 @@ dialog select {
   line-height: 1.6;
 }
 
-/* ---------- Extra pages ---------- */
 .view[hidden] { display: none; }
 
 .nav-link { display: flex; justify-content: space-between; align-items: center; }
@@ -685,7 +683,6 @@ dialog select {
 .course h5 { font-size: 15px; }
 .course p { font-size: 12px; }
 
-/* Notifications read state */
 .notif { cursor: pointer; border-radius: 8px; padding-left: 8px; padding-right: 8px; }
 .notif:hover { background: #EEFCFF; }
 .notif.unread h4 { font-weight: 700; color: var(--dark-purple); }
@@ -695,7 +692,6 @@ dialog select {
 .add-btn:disabled { opacity: 0.45; cursor: default; }
 .add-btn:disabled:hover { background: var(--purple); }
 
-/* ---------- Log in / Sign up ---------- */
 [hidden] { display: none !important; }
 
 .auth {
@@ -764,12 +760,8 @@ dialog select {
   #userName { display: none; }
 }
 
-/* Promo image */
 .books img { display: block; width: 100%; max-width: 150px; height: auto; margin: 0 auto; }
 
-/* =========================================================
-   Extra style & pizzazz
-   ========================================================= */
 :root {
   --grad: linear-gradient(135deg, #1E88C7 0%, #2EC4A0 100%);
   --grad-cool: linear-gradient(135deg, #4FC3E8 0%, #2D8CE0 100%);
@@ -795,7 +787,6 @@ body {
 
 .app { box-shadow: 0 24px 60px #3C90BB30; animation: fadeUp .5s ease both; }
 
-/* Sidebar */
 .logo span { display: inline-block; font-size: 30px; animation: spin 10s linear infinite; }
 .nav-link { font-weight: 500; font-size: 14px; transition: transform .2s, background .2s, color .2s, box-shadow .2s; }
 .nav-link:hover { transform: translateX(5px); }
@@ -811,7 +802,6 @@ body {
 .promo button { background: var(--grad); color: white; transition: transform .2s, box-shadow .2s; }
 .promo button:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 8px 18px #46B7EC66; }
 
-/* Header */
 .topbar h1 {
   font-weight: 700;
   background: linear-gradient(90deg, #0F3D5E, #1E88C7 60%, #2EC4A0);
@@ -823,10 +813,8 @@ body {
 .logout-btn { transition: transform .2s, background .2s; }
 .logout-btn:hover { transform: translateY(-2px); }
 
-/* Views animate in */
 .view:not([hidden]) { animation: fadeUp .4s ease both; }
 
-/* Buttons */
 .add-btn { background: var(--grad); box-shadow: 0 8px 18px #46B7EC40; transition: transform .2s, box-shadow .2s, filter .2s; }
 .add-btn:hover { background: var(--grad); filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 12px 24px #46B7EC55; }
 .add-btn:active { transform: translateY(0) scale(.98); }
@@ -834,7 +822,6 @@ body {
 .week-header button { transition: transform .2s, background .2s; }
 .week-header button:hover { background: #BCF6FF; transform: scale(1.06); }
 
-/* Panels & cards */
 .schedule-panel, .calendar-panel, .upcoming-panel, .card-box {
   transition: transform .25s, box-shadow .25s;
 }
@@ -848,19 +835,16 @@ body {
 .course.class-card { border-radius: 16px; padding: 18px; }
 .course.class-card:hover { transform: translateY(-6px) rotate(-.6deg); }
 
-/* Calendar */
 .calendar button { transition: transform .15s, background .15s; }
 .calendar button:hover { transform: scale(1.18); }
 .calendar button.today { background: var(--grad); box-shadow: 0 6px 14px #46B7EC66; animation: pulse 2.2s infinite; }
 
-/* Rows & badges */
 .row { transition: background .2s, transform .2s; border-radius: 10px; }
 .row:hover { background: #EEFCFF; transform: translateX(3px); }
 .badge, .event-date { background: linear-gradient(135deg, #D6F8FF, #D0FFFE); }
 .dot { animation: pulse 1.6s infinite; }
 .notif.unread { background: linear-gradient(90deg, #EEFCFF, transparent); }
 
-/* Dashboard */
 .hero {
   position: relative;
   overflow: hidden;
@@ -886,7 +870,6 @@ body {
 .stat:nth-child(3) { background: var(--grad-warm); }
 .stat:nth-child(4) { background: var(--grad-sun); }
 
-/* Dialogs */
 dialog[open] { animation: pop .25s ease both; }
 dialog::backdrop { background: #142C3B70; backdrop-filter: blur(5px); }
 dialog input:focus, dialog select:focus, .auth input:focus {
@@ -895,12 +878,10 @@ dialog input:focus, dialog select:focus, .auth input:focus {
   box-shadow: 0 0 0 3px #46B7EC30;
 }
 
-/* Auth */
 .auth { animation: pop .5s ease both; }
 .auth-title { background: linear-gradient(90deg, #0F3D5E, #1E88C7, #2EC4A0); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .auth-title span { display: inline-block; -webkit-text-fill-color: var(--purple); animation: spin 10s linear infinite; }
 
-/* Details */
 :focus-visible { outline: 3px solid #46B7ECaa; outline-offset: 2px; }
 ::selection { background: #46B7EC33; }
 ::-webkit-scrollbar { height: 8px; width: 8px; }
